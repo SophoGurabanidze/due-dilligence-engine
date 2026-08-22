@@ -40,7 +40,11 @@ npm run dev      # starts Next.js frontend
 - **OpenCorporates** — company registry data
 - **CourtListener** — federal court records
 
-## How it works
+## CI
+
+GitHub Actions runs typecheck and `next build` on every push to `main`.
+
+CI uses placeholder Clerk/Convex public keys so the build does not need secrets. Live investigations still use keys on your Convex deployment, not GitHub.
 
 1. User enters a company name
 2. Six research agents run in parallel (web, financial, legal, company, market, data room)
