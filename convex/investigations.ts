@@ -130,3 +130,22 @@ export const setIdentity = mutation({
     await ctx.db.patch(args.id, { identity: args.identity });
   },
 });
+
+export const resetForRetry = mutation({
+  args: { id: v.id("investigations") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, {
+      status: "pending",
+      error: undefined,
+      agentStatuses: {
+        identity: "pending",
+        web: "pending",
+        financial: "pending",
+        legal: "pending",
+        company: "pending",
+        market: "pending",
+        dataroom: "pending",
+      },
+    });
+  },
+});

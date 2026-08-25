@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { useParams } from "next/navigation";
-import { useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import { IdentityCard } from "@/components/identity-card";
@@ -9,11 +10,13 @@ import { AgentProgressPanel } from "@/components/agent-progress";
 import { ScoreCard } from "@/components/score-card";
 import { RedFlagsList } from "@/components/red-flags";
 import { FindingsList } from "@/components/findings-list";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, Copy, Check, RotateCcw } from "lucide-react";
 
 export default function InvestigationPage() {
   const params = useParams();
   const id = params.id as Id<"investigations">;
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const investigation = useQuery(api.investigations.get, { id });
   const findings = useQuery(api.findings.getByInvestigation, {
@@ -22,6 +25,30 @@ export default function InvestigationPage() {
   const report = useQuery(api.reports.getByInvestigation, {
     investigationId: id,
   });
+  const runInvestigation = useAction(api.orchestrator.runInvestigation);
+  const resetForRetry = useMutation(api.investigations.resetForRetry);
+  const deleteFindings = useMutation(api.findings.deleteByInvestigation);
+  const deleteReports = useMutation(api.reports.deleteByInvestigation);
+
+  const handleRetry = async () => {
+    setIsRetrying(true);
+    try {
+      await deleteReports({ investigationId: id });
+      await deleteFindings({ investigationId: id });
+      await resetForRetry({ id });
+      await runInvestigation({ investigationId: id });
+    } catch (err) {
+      console.error(err);
+      setIsRetrying(false);
+    }
+  };
+
+  const handleCopySummary = async () => {
+    if (!report?.summary) return;
+    await navigator.clipboard.writeText(report.summary);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   if (!investigation) {
     return (
@@ -38,16 +65,30 @@ export default function InvestigationPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold">{investigation.companyName}</h1>
-        <p className="mt-1 text-muted-foreground">
-          Investigation started{" "}
-          {new Date(investigation.createdAt).toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">{investigation.companyName}</h1>
+          <p className="mt-1 text-muted-foreground">
+            Investigation started{" "}
+            {new Date(investigation.createdAt).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </p>
+        </div>
+        {(investigation.status === "failed" ||
+          investigation.status === "complete") && (
+          <button
+            type="button"
+            onClick={handleRetry}
+            disabled={isRetrying}
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-secondary px-4 py-2 text-sm font-medium transition-colors hover:border-primary/50 disabled:opacity-50"
+          >
+            <RotateCcw className={`h-4 w-4 ${isRetrying ? "animate-spin" : ""}`} />
+            {isRetrying ? "Retrying..." : "Retry investigation"}
+          </button>
+        )}
       </div>
 
       {investigation.status === "failed" && (
@@ -95,7 +136,21 @@ export default function InvestigationPage() {
 
       {report?.summary && (
         <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="mb-3 text-xl font-bold">Executive Summary</h2>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="text-xl font-bold">Executive Summary</h2>
+            <button
+              type="button"
+              onClick={handleCopySummary}
+              className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {copied ? (
+                <Check className="h-3.5 w-3.5 text-score-excellent" />
+              ) : (
+                <Copy className="h-3.5 w-3.5" />
+              )}
+              {copied ? "Copied" : "Copy"}
+            </button>
+          </div>
           <p className="whitespace-pre-wrap leading-relaxed text-muted-foreground">
             {report.summary}
           </p>

@@ -27,6 +27,8 @@ export default function Home() {
     }
   };
 
+  const examples = ["Figure AI", "Rippling", "Anduril"];
+
   const features = [
     {
       icon: Search,
@@ -79,6 +81,18 @@ export default function Home() {
           >
             {isLoading ? "Starting..." : "Investigate"}
           </button>
+        </div>
+        <div className="mt-3 flex flex-wrap justify-center gap-2">
+          {examples.map((name) => (
+            <button
+              key={name}
+              type="button"
+              onClick={() => setCompanyName(name)}
+              className="rounded-full border border-border bg-secondary px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
+            >
+              Try {name}
+            </button>
+          ))}
         </div>
       </form>
 

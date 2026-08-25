@@ -84,3 +84,18 @@ export const get = query({
     return await ctx.db.get(args.id);
   },
 });
+
+export const deleteByInvestigation = mutation({
+  args: { investigationId: v.id("investigations") },
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("findings")
+      .withIndex("by_investigation", (q) =>
+        q.eq("investigationId", args.investigationId)
+      )
+      .collect();
+    for (const row of rows) {
+      await ctx.db.delete(row._id);
+    }
+  },
+});
